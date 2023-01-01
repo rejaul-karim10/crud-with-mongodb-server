@@ -1,49 +1,51 @@
 const express = require("express");
 const { MongoClient, ObjectId } = require("mongodb");
-require("colors");
 const cors = require("cors");
+const { response } = require("express");
+require("colors");
 
 const app = express();
 
+// middleware
 app.use(express.json());
 app.use(cors());
 
 const uri = "mongodb://localhost:27017";
-
 const client = new MongoClient(uri);
 
 async function dbConnect() {
   try {
     await client.connect();
-    console.log("Database connected".yellow.italic);
+    console.log("Database Connected".yellow.italic);
   } catch (error) {
     console.log(error.name.bgRed, error.message.bold);
   }
 }
-
 dbConnect();
 
-const Product = client.db("foodPanda").collection("products");
-const User = client.db("foodPanda").collection("users");
+const productCollection = client.db("foodPanda").collection("products");
+const userCollection = client.db("foodPanda").collection("users");
 
-// endpoint
+//endpoints
+// create product using this endpoint
 app.post("/product", async (req, res) => {
   try {
-    const result = await Product.insertOne(req.body);
+    const result = await productCollection.insertOne(req.body);
 
     if (result.insertedId) {
       res.send({
         success: true,
-        message: `Successfully created the ${req.body.name} with id ${result.insertedId}`,
+        message: `successfully created the ${req.body.name} with id ${result.insertedId}`,
       });
     } else {
       res.send({
         success: false,
-        error: "Couldn't create the product",
+        message: "Couldn't create the product",
       });
     }
   } catch (error) {
     console.log(error.name.bgRed, error.message.bold);
+
     res.send({
       success: false,
       error: error.message,
@@ -51,15 +53,15 @@ app.post("/product", async (req, res) => {
   }
 });
 
+//get product using this endpoint
 app.get("/product", async (req, res) => {
   try {
-    const cursor = Product.find({});
-    const products = await cursor.toArray();
-
+    const product = await productCollection.find({}).toArray();
+    // const product = await cursor.toArray()
     res.send({
       success: true,
-      message: "Successfully got the data",
-      data: products,
+      message: "Successfully Got The Data",
+      data: product,
     });
   } catch (error) {
     console.log(error.name.bgRed, error.message.bold);
@@ -70,28 +72,27 @@ app.get("/product", async (req, res) => {
   }
 });
 
+// delete data from the database
 app.delete("/product/:id", async (req, res) => {
   const { id } = req.params;
-
   try {
-    const product = await Product.findOne({ _id: ObjectId(id) });
+    const product = await productCollection.findOne({ _id: ObjectId(id) });
 
     if (!product?._id) {
       res.send({
         success: false,
-        error: "Product doesn't exist",
+        error: "Product Doesn't exist",
       });
       return;
     }
 
-    const result = await Product.deleteOne({ _id: ObjectId(id) });
+    const result = await productCollection.deleteOne({ _id: ObjectId(id) });
 
     if (result.deletedCount) {
       res.send({
         success: true,
-        message: `Successfully deleted the ${product.name}`,
+        message: `Successfully Deleted The ${product.name}`,
       });
-    } else {
     }
   } catch (error) {
     res.send({
@@ -104,9 +105,7 @@ app.delete("/product/:id", async (req, res) => {
 app.get("/product/:id", async (req, res) => {
   try {
     const { id } = req.params;
-
-    const product = await Product.findOne({ _id: ObjectId(id) });
-
+    const product = await productCollection.findOne({ _id: ObjectId(id) });
     res.send({
       success: true,
       data: product,
@@ -119,22 +118,27 @@ app.get("/product/:id", async (req, res) => {
   }
 });
 
+
+// update product
 app.patch("/product/:id", async (req, res) => {
-  const { id } = req.params;
-
   try {
-    const result = await Product.updateOne({ _id: ObjectId(id) }, { $set: req.body });
+    const { id } = req.params;
 
-    if (result.matchedCount) {
+    const result = await productCollection.updateOne(
+      { _id: ObjectId(id) },
+      { $set: req.body }
+    );
+
+    if (result.modifiedCount) {
       res.send({
         success: true,
-        message: `successfully updated ${req.body.name}`,
+        message: `Successfully edited ${req.body.name}`,
       });
-    } else {
+    }else{
       res.send({
         success: false,
-        error: "Couldn't update  the product",
-      });
+        error: error.message
+      })
     }
   } catch (error) {
     res.send({
